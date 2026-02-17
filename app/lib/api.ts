@@ -1,79 +1,51 @@
-// API Types
-export interface EmailRecord {
-  id: number;
-  sender_email: string;
-  receiver_email: string;
-  status: string;
-  status_message: string;
-  sent_at: string;
-  responds: string;
-  subject: string | null;
-  body: string | null;
-  first_name: string;
-  company: string;
-  created_at: string;
-}
+// API configuration
+// In production, use the full backend URL
+// In development, use the proxy configured in vite.config.ts
+const API_BASE_URL = import.meta.env.PROD 
+  ? 'https://tfshrms.cloud/email/'
+  : '/api/';
 
-export interface PaginationInfo {
-  page: number;
-  per_page: number;
-  total_pages: number;
-  total_records: number;
-}
-
-export interface FiltersApplied {
-  date: string | null;
-  receiver_email: string | null;
-  sender_email: string | null;
-}
-
-export interface EmailListResponse {
-  status: number;
-  message: string;
+// Unsubscribe response interface
+export interface UnsubscribeResponse {
   data: {
-    records: EmailRecord[];
-    pagination: PaginationInfo;
-    filters_applied: FiltersApplied;
+    is_subscribed: number;
+    k: string;
+    receiver_email: string;
+    sender_email: string;
   };
+  message: string;
+  status: number;
 }
 
-export interface EmailListRequest {
-  page: number;
-  per_page: number;
-  date: string;
+// Unsubscribe request interface
+export interface UnsubscribeRequest {
+  k: string;
+  to: string;
+  from: string;
 }
 
+/**
+ * Unsubscribe from email notifications
+ */
+export const unsubscribeEmail = async (
+  payload: UnsubscribeRequest
+): Promise<UnsubscribeResponse> => {
+  const response = await fetch(`${API_BASE_URL}email_tracking/unsub`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
 
-// API Service
-export const emailApi = {
-  async getEmails(request: EmailListRequest): Promise<EmailListResponse> {
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api/';
-    console.log('Fetching from:', `${apiBaseUrl}email_send_import/list`);
-    console.log('Request payload:', request);
-    
-    try {
-      const response = await fetch(`${apiBaseUrl}email_send_import/list`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request),
-      });
+  if (!response.ok) {
+    throw new Error(`Failed to unsubscribe: ${response.statusText}`);
+  }
 
-      console.log('Response status:', response.status);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('API Error Response:', errorText);
-        throw new Error(`API Error: ${response.status} ${response.statusText} - ${errorText}`);
-      }
+  const data = await response.json();
+  return data;
+};
 
-      const data = await response.json();
-      console.log('Response data:', data);
-      return data;
-    } catch (error) {
-      console.error('Fetch error:', error);
-      throw error;
-    }
-  },
+export const api = {
+  unsubscribeEmail,
 };
